@@ -12,7 +12,7 @@ let state = {
   format: 'BO3',
   map: '',
   phase: 'waiting',
-  timer: { duration: 30, remaining: 30, running: false, turnIndex: 0 },
+  timer: { duration: 30, remaining: 30, running: false, turnIndex: 0, draftComplete: false },
   brawlerCache: {},
   pollInterval: null,
   pollStatsInterval: null
@@ -118,7 +118,7 @@ function renderPlayers(side, players) {
   for (let i = 0; i < 3; i++) {
     const p = players[i] || {};
     const card = document.createElement('div');
-    const hasTimerSlot = side === turn.side && i === turn.playerIndex;
+    const hasTimerSlot = turn && side === turn.side && i === turn.playerIndex;
     const hasMysterySlot = (side === 'a' && i === 2) || (side === 'b' && i === 2);
 
     if (hasTimerSlot) {
@@ -236,7 +236,45 @@ function renderFeaturedPlayer(side, player) {
 //  TIMER
 // ─────────────────────────────────────────────
 function getCurrentDraftTurn() {
+  if (state.timer.draftComplete) return null;
   return draftTurns[state.timer.turnIndex % draftTurns.length] || draftTurns[0];
+}
+
+function getDraftTurnPlayer(turn) {
+  if (!turn) return {};
+  return (getTeam(turn.side).players || [])[turn.playerIndex] || {};
+}
+
+function hasDraftPick(turn) {
+  const player = getDraftTurnPlayer(turn);
+  return Boolean(player.brawlerImg || player.brawlerName);
+}
+
+function getNextOpenDraftTurnIndex() {
+  return draftTurns.findIndex(turn => !hasDraftPick(turn));
+}
+
+function syncTimerToDraftPicks() {
+  if (!state.timer) return;
+
+  const nextTurnIndex = getNextOpenDraftTurnIndex();
+
+  if (nextTurnIndex === -1) {
+    state.timer.draftComplete = true;
+    state.timer.running = false;
+    state.timer.remaining = 0;
+    stopTimerInterval();
+    return;
+  }
+
+  const shouldMoveTimer = state.timer.draftComplete || state.timer.turnIndex !== nextTurnIndex;
+  state.timer.draftComplete = false;
+
+  if (!shouldMoveTimer) return;
+
+  state.timer.turnIndex = nextTurnIndex;
+  state.timer.remaining = state.timer.duration;
+  if (state.timer.running) startTimer();
 }
 
 function resetTimer(duration, shouldRun = false, turnIndex = state.timer.turnIndex || 0) {
@@ -244,6 +282,7 @@ function resetTimer(duration, shouldRun = false, turnIndex = state.timer.turnInd
   state.timer.duration = Math.max(1, seconds);
   state.timer.remaining = state.timer.duration;
   state.timer.turnIndex = Math.max(0, Number(turnIndex) || 0) % draftTurns.length;
+  state.timer.draftComplete = false;
   state.timer.running = shouldRun;
   if (state.timer.running) startTimer();
   else stopTimerInterval();
@@ -272,6 +311,7 @@ function advanceTimerTurn() {
   const keepRunning = state.timer.running;
   state.timer.turnIndex = (state.timer.turnIndex + 1) % draftTurns.length;
   state.timer.remaining = state.timer.duration;
+  state.timer.draftComplete = false;
   state.timer.running = keepRunning;
   render();
   if (keepRunning) startTimer();
@@ -396,6 +436,7 @@ async function pollMatch() {
   }
 
   maybeResetTimerForPhase();
+  syncTimerToDraftPicks();
   render();
 }
 
@@ -424,6 +465,7 @@ async function pollStats() {
       }
     });
   });
+  syncTimerToDraftPicks();
   render();
 }
 
@@ -474,8 +516,10 @@ function handleControlMessage(msg) {
       state.timer.remaining = Math.max(0, Number(msg.remaining ?? state.timer.remaining));
       state.timer.duration = Math.max(1, Number(msg.duration ?? state.timer.duration));
       state.timer.turnIndex = Math.max(0, Number(msg.turnIndex ?? state.timer.turnIndex ?? 0)) % draftTurns.length;
+      state.timer.draftComplete = Boolean(msg.draftComplete);
       state.timer.running = Boolean(msg.running);
       if (state.timer.running) startTimer();
+      else stopTimerInterval();
       updateTimerDisplay();
       break;
     case 'TIMER_RESET':
@@ -494,8 +538,11 @@ function handleControlMessage(msg) {
       break;
     case 'FULL_STATE':
       Object.assign(state, msg.state);
-      state.timer = Object.assign({ duration: 30, remaining: 30, running: false, turnIndex: 0 }, state.timer || {});
+      state.timer = Object.assign({ duration: 30, remaining: 30, running: false, turnIndex: 0, draftComplete: false }, state.timer || {});
       maybeResetTimerForPhase();
+      syncTimerToDraftPicks();
+      if (state.timer.running) startTimer();
+      else stopTimerInterval();
       startPolling();
       break;
   }

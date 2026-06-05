@@ -34,6 +34,7 @@ const state = {
   pollTimer: null,
   overlayWindow: null,
   currentBanTarget: null,
+  timer: { duration: 30, remaining: 30, running: false, turnIndex: 0, draftComplete: false },
 };
 
 let bc;
@@ -46,6 +47,8 @@ window.addEventListener('DOMContentLoaded', () => {
   updateScoreDisplay();
   updateMatchSummary();
   loadBrawlers();
+  updateTimerUI();
+  syncTimerToDraftPicks();
 
   if (window.location.protocol === 'file:') {
     const alertDiv = document.createElement('div');
@@ -197,7 +200,21 @@ function setPhase(phase) {
   document.querySelectorAll('.phase-btn').forEach(b => b.classList.remove('active'));
   event.target.classList.add('active');
   send({ type: 'SET_PHASE', phase, status: state.matchStatus });
+  syncTimerToDraftPicks();
 }
+
+// Snake draft order: A1 → B1 → B2 → A2 → A3 → B3
+const draftTurns = [
+  { side: 'a', playerIndex: 0 },  // Turn 1: Team A — Player 1
+  { side: 'b', playerIndex: 0 },  // Turn 2: Team B — Player 1
+  { side: 'b', playerIndex: 1 },  // Turn 3: Team B — Player 2
+  { side: 'a', playerIndex: 1 },  // Turn 4: Team A — Player 2
+  { side: 'a', playerIndex: 2 },  // Turn 5: Team A — Player 3
+  { side: 'b', playerIndex: 2 }   // Turn 6: Team B — Player 3
+];
+
+let timerInterval = null;
+let lastPhase = state.phase;
 
 function getDraftTimerDuration() {
   const input = document.getElementById('timer-duration');
@@ -205,19 +222,162 @@ function getDraftTimerDuration() {
 }
 
 function resetDraftTimer() {
-  send({ type: 'TIMER_RESET', duration: getDraftTimerDuration() });
+  state.timer.duration = getDraftTimerDuration();
+  state.timer.remaining = state.timer.duration;
+  state.timer.running = false;
+  state.timer.draftComplete = false;
+  state.timer.turnIndex = 0;
+  stopTimerInterval();
+  updateTimerUI();
+  pushTimerState();
 }
 
 function startDraftTimer() {
-  send({ type: 'TIMER_START' });
+  state.timer.running = true;
+  startTimerInterval();
+  updateTimerUI();
+  pushTimerState();
 }
 
 function pauseDraftTimer() {
-  send({ type: 'TIMER_PAUSE' });
+  state.timer.running = false;
+  stopTimerInterval();
+  updateTimerUI();
+  pushTimerState();
 }
 
 function nextDraftTimer() {
-  send({ type: 'TIMER_NEXT' });
+  advanceTimerTurn();
+}
+
+function stopTimerInterval() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+function startTimerInterval() {
+  stopTimerInterval();
+  timerInterval = setInterval(() => {
+    if (!state.timer.running) return;
+    state.timer.remaining = Math.max(0, state.timer.remaining - 1);
+    updateTimerUI();
+    pushTimerState();
+    if (state.timer.remaining <= 0) {
+      advanceTimerTurn();
+    }
+  }, 1000);
+}
+
+function advanceTimerTurn() {
+  const keepRunning = state.timer.running;
+  state.timer.turnIndex = (state.timer.turnIndex + 1) % draftTurns.length;
+  state.timer.remaining = state.timer.duration;
+  state.timer.draftComplete = false;
+  state.timer.running = keepRunning;
+  updateTimerUI();
+  pushTimerState();
+  if (keepRunning) startTimerInterval();
+  else stopTimerInterval();
+}
+
+function updateTimerUI() {
+  const activeTurnEl = document.getElementById('control-active-turn');
+  const timerStateEl = document.getElementById('control-timer-state');
+  const timerSecsEl = document.getElementById('control-timer-seconds');
+  if (!activeTurnEl || !timerStateEl || !timerSecsEl) return;
+
+  if (state.timer.draftComplete) {
+    activeTurnEl.textContent = 'COMPLETE';
+    activeTurnEl.style.color = 'var(--primary)';
+    timerStateEl.textContent = 'DONE';
+    timerStateEl.style.color = '#4a9fff';
+    timerSecsEl.textContent = '00s';
+    return;
+  }
+
+  const turn = draftTurns[state.timer.turnIndex % draftTurns.length];
+  const team = turn.side === 'a' ? state.teamA : state.teamB;
+  const player = team.players[turn.playerIndex];
+  const playerName = player ? player.name : `PLAYER ${turn.playerIndex + 1}`;
+  
+  activeTurnEl.textContent = `${team.name} — ${playerName}`.toUpperCase();
+  activeTurnEl.style.color = turn.side === 'a' ? '#4a9fff' : '#ff6b6b';
+
+  timerStateEl.textContent = state.timer.running ? 'RUNNING' : 'PAUSED';
+  timerStateEl.style.color = state.timer.running ? '#2ecc71' : '#f1c40f';
+
+  timerSecsEl.textContent = `${state.timer.remaining}s`;
+}
+
+function pushTimerState() {
+  send({
+    type: 'SET_TIMER',
+    remaining: state.timer.remaining,
+    duration: state.timer.duration,
+    turnIndex: state.timer.turnIndex,
+    draftComplete: state.timer.draftComplete,
+    running: state.timer.running
+  });
+}
+
+function getDraftTurnPlayer(turn) {
+  if (!turn) return {};
+  const team = turn.side === 'a' ? state.teamA : state.teamB;
+  return (team.players || [])[turn.playerIndex] || {};
+}
+
+function hasDraftPick(turn) {
+  const player = getDraftTurnPlayer(turn);
+  return Boolean(player.brawlerImg || player.brawlerName);
+}
+
+function getNextOpenDraftTurnIndex() {
+  return draftTurns.findIndex(turn => !hasDraftPick(turn));
+}
+
+function syncTimerToDraftPicks() {
+  if (!state.timer) return;
+
+  const phaseChangedToPick = (state.phase === 'pick' && lastPhase !== 'pick');
+  lastPhase = state.phase;
+
+  if (state.phase !== 'pick') {
+    if (state.timer.running) {
+      state.timer.running = false;
+      stopTimerInterval();
+      updateTimerUI();
+      pushTimerState();
+    }
+    return;
+  }
+
+  const nextTurnIndex = getNextOpenDraftTurnIndex();
+
+  if (nextTurnIndex === -1) {
+    if (!state.timer.draftComplete) {
+      state.timer.draftComplete = true;
+      state.timer.running = false;
+      state.timer.remaining = 0;
+      stopTimerInterval();
+      updateTimerUI();
+      pushTimerState();
+    }
+    return;
+  }
+
+  const turnChanged = state.timer.turnIndex !== nextTurnIndex;
+  
+  if (turnChanged || phaseChangedToPick || state.timer.draftComplete) {
+    state.timer.draftComplete = false;
+    state.timer.turnIndex = nextTurnIndex;
+    state.timer.remaining = state.timer.duration;
+    state.timer.running = true; // Auto start/resume when turn advances or pick phase begins
+    startTimerInterval();
+    updateTimerUI();
+    pushTimerState();
+  }
 }
 
 // BRAWLER PICKER
@@ -296,6 +456,7 @@ function assignBrawler(b) {
     updatePickSlotUI(side, parseInt(idx), b);
   }
   pushToOverlay();
+  syncTimerToDraftPicks();
 }
 
 let pendingBan = null;
@@ -332,6 +493,7 @@ function openPickBrawler(side, idx) {
         team.players[pendingBan.idx].brawlerName = b.name;
         updatePickSlotUI(pendingBan.side, pendingBan.idx, b);
         pushToOverlay();
+        syncTimerToDraftPicks();
       }
       closeBanModal();
     };
@@ -345,6 +507,7 @@ function clearPick(side, idx) {
   const prev = document.getElementById(`player-${side}-${idx}-brawler-prev`);
   prev.innerHTML = '?';
   pushToOverlay();
+  syncTimerToDraftPicks();
 }
 
 function updateManualBanSlotUI(side, slot, b) {
@@ -407,6 +570,7 @@ async function loadFromAPI() {
     }
   }
   setApiStatus('ok');
+  syncTimerToDraftPicks();
   pushToOverlay();
   updateMatchSummary();
 }
@@ -546,6 +710,7 @@ function pushToOverlay() {
     map: state.map,
     visible: state.visible,
     badgeVisible: state.badgeVisible,
+    timer: JSON.parse(JSON.stringify(state.timer)),
   };
   send({ type: 'FULL_STATE', state: stateData });
   try { localStorage.setItem('brawl_overlay_state', JSON.stringify(stateData)); } catch(e) {}
@@ -609,6 +774,11 @@ function resetAll() {
   
   // Stop polling first
   stopPolling();
+  
+  // Reset timer
+  state.timer = { duration: 30, remaining: 30, running: false, turnIndex: 0, draftComplete: false };
+  stopTimerInterval();
+  updateTimerUI();
   
   // Reset state variables
   state.bountyId = '';
