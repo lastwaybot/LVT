@@ -344,6 +344,7 @@ function syncTimerToDraftPicks() {
   lastPhase = state.phase;
 
   if (state.phase !== 'pick') {
+    stopStatsPolling();
     if (state.timer.running) {
       state.timer.running = false;
       stopTimerInterval();
@@ -353,9 +354,13 @@ function syncTimerToDraftPicks() {
     return;
   }
 
+  // Start fast polling for stats if in pick phase
+  startStatsPolling();
+
   const nextTurnIndex = getNextOpenDraftTurnIndex();
 
   if (nextTurnIndex === -1) {
+    stopStatsPolling();
     if (!state.timer.draftComplete) {
       state.timer.draftComplete = true;
       state.timer.running = false;
@@ -659,6 +664,38 @@ function applyStatsData(match) {
   });
 }
 
+let statsPollTimer = null;
+
+function startStatsPolling() {
+  if (statsPollTimer) return; // Already running
+  if (!state.bountyId || !state.matchId || state.phase !== 'pick') return;
+  
+  statsPollTimer = setInterval(async () => {
+    if (state.phase !== 'pick') {
+      stopStatsPolling();
+      return;
+    }
+    try {
+      const resp = await fetch(getProxy() + encodeURIComponent(`${API}/games/brawlstars/match/stats?bountyId=${state.bountyId}&matchIds=${state.matchId}`));
+      const data = await resp.json();
+      const matches = data.body?.matches || [];
+      if (matches.length) {
+        applyStatsData(matches[0]);
+        syncTimerToDraftPicks();
+      }
+    } catch(e) {
+      console.warn('Fast stats poll failed:', e);
+    }
+  }, 1500); // Fast poll stats every 1.5 seconds to immediately detect picks
+}
+
+function stopStatsPolling() {
+  if (statsPollTimer) {
+    clearInterval(statsPollTimer);
+    statsPollTimer = null;
+  }
+}
+
 // POLLING
 function startPolling() {
   stopPolling();
@@ -673,6 +710,7 @@ function startPolling() {
 
 function stopPolling() {
   if (state.pollTimer) { clearInterval(state.pollTimer); state.pollTimer = null; }
+  stopStatsPolling();
   setApiStatus('idle');
   log('Polling stopped.', 'info');
 }
