@@ -1,131 +1,105 @@
 # Brawl Stars Broadcast Overlay System
 
-## Project Structure
+---
+
+## ⚡ QUICK START (For Testing)
+
+### Step 1 — Install Node.js (one time only)
+Download and install from: **https://nodejs.org/** *(choose LTS version)*
+
+### Step 2 — Download the project
+Clone or download from GitHub:
+```
+https://github.com/lastwaybot/LVT
+```
+
+### Step 3 — Start the server
+Open the `brawl-overlay` folder and **double-click `START.bat`**
+
+> ✅ The control panel will open automatically in your browser at `http://localhost:8080`
+
+### Step 4 — Open the Overlay
+In a new browser tab, open:
+```
+http://localhost:8080/overlay/overlay.html
+```
+
+> ⚠️ **Important:** Always use `http://localhost:8080/...` URLs — never open the `.html` files directly
+
+---
+
+## 🎮 How to Use the Control Panel
+
+| Section | What it does |
+|---------|-------------|
+| **API Configuration** | Enter Bounty ID + Match ID → click LOAD FROM API |
+| **🌐 API BANS** | Auto-filled from Matcherino when you load from API |
+| **✋ Manual BANS** | Click the `+` slots to manually assign bans |
+| **Players** | Edit names, upload portraits, set brawler picks |
+| **Series Score** | +/- buttons to adjust match score |
+| **Draft Phase** | Switch between BAN → PICK → LIVE phases |
+| **Draft Timer** | Set seconds, START/PAUSE/NEXT TURN |
+| **Overlay Visibility** | SHOW / HIDE the overlay during broadcast |
+
+---
+
+## 📺 Ban Slots Explained
+
+Each team has **5 ban slots** on the overlay:
+- **Slots 1-2-3** → Auto-filled from the Matcherino API (read-only in control panel)
+- **Slots 4-5** → Manual bans — click the `+` boxes in the control panel
+
+---
+
+## 🔗 Finding Your IDs
+
+**Bounty ID & Match ID** — from the Matcherino tournament page:
+1. Open your match on Matcherino
+2. Press `F12` → Network tab → Reload the page
+3. Look for requests containing `bounties?id=XXXXX` or `brackets/match?matchId=XXXXX`
+4. Those numbers are your IDs
+
+---
+
+## 📁 Project Structure
 ```
 brawl-overlay/
-├── overlay/
-│   └── overlay.html        ← The transparent overlay (load into vMix)
+├── START.bat              ← Double-click this to start!
+├── server.js              ← Local server (runs in background)
 ├── control/
-│   └── control.html        ← Your control panel (open in browser on 2nd monitor)
-├── assets/
-│   ├── brawlers/           ← (optional) local brawler images
-│   ├── teams/              ← (optional) team logos
-│   └── players/            ← (optional) player portraits
-└── README.md
+│   ├── control.html       ← Control panel (open on 2nd monitor)
+│   ├── control.js
+│   └── control.css
+├── overlay/
+│   ├── overlay.html       ← Overlay (add to vMix/OBS)
+│   ├── overlay.js
+│   └── overlay.css
+└── {overlay,control,assets}/
+    └── Brawlers_Portrait/ ← Brawler images
 ```
 
 ---
 
-## QUICK START (5 minutes)
+## 📺 vMix / OBS Setup
 
-### Step 1 — Run a Local Web Server
-The files MUST be served over HTTP for vMix and BroadcastChannel to work.
+**vMix:**
+1. Add Input → Web Browser → `http://localhost:8080/overlay/overlay.html`
+2. Set: **1920 × 1080**, enable **Transparent Background**
+3. Layer it over your camera feeds
 
-**Option A — Python (easiest):**
-```bash
-cd brawl-overlay
-python -m http.server 8080
-```
-
-**Option B — Node.js:**
-```bash
-npx serve brawl-overlay -p 8080
-```
-
-Then open:
-- Control Panel: `http://localhost:8080/control/control.html`
-- Overlay: `http://localhost:8080/overlay/overlay.html`
+**OBS:**
+1. Add Source → Browser → URL: `http://localhost:8080/overlay/overlay.html`
+2. Width: **1920**, Height: **1080**
+3. Check ✅ **Shutdown source when not visible**
 
 ---
 
-### Step 2 — Add Overlay to vMix
+## ⚠️ Troubleshooting
 
-1. Open vMix → **Add Input** → **Web Browser**
-2. Set URL: `http://localhost:8080/overlay/overlay.html`
-3. Set Width: **1920**, Height: **1080**
-4. Check ✅ **Transparent Background**
-5. Click **OK**
-6. In vMix, right-click the input → **Set as Overlay 1** (or drag to overlay track)
-7. Click the **Overlay 1** button to make it live — it will sit on top of your camera feeds
-
----
-
-### Step 3 — Use the Control Panel
-
-Open `http://localhost:8080/control/control.html` in Chrome on your 2nd monitor.
-
-**To load live data from Matcherino API:**
-1. Enter your **Bounty ID** (e.g. `192279`)
-2. Enter your **Match ID** (e.g. `180474500`)
-3. Click **LOAD FROM API** — team names, logos, players, bans will populate automatically
-4. Click **START POLLING** — overlay will auto-update every 5 seconds during the match
-
-**To control manually:**
-- Edit team names, upload logos, set player names/portraits
-- Click brawler ban slots to assign bans from the brawler picker
-- Use +/- buttons to adjust series scores
-- Use phase buttons (BAN → PICK → LIVE) to track draft state
-- Use SHOW/HIDE OVERLAY buttons during broadcast
-
----
-
-## API ENDPOINTS USED
-
-| What | Endpoint | When |
-|------|----------|------|
-| Match info, teams, scores, bans | `/brackets/match?matchId=X` | Poll every 5s |
-| Live stats, brawler picks, map | `/games/brawlstars/match/stats?bountyId=X&matchIds=Y` | Poll every 3s |
-| Brawler roster | `/games/brawlstars/brawlers` | Cache on load |
-| Tournament overview | `/bounties?id=X` | Once on load |
-| Full bracket | `/brackets?id=X` | Once on load |
-
-All endpoints are public — **no auth required.**
-
----
-
-## HOW OVERLAY ↔ CONTROL PANEL COMMUNICATE
-
-They use the **BroadcastChannel API** (`brawl_overlay` channel).
-- Both files must be served from the **same origin** (same `localhost:8080`)
-- When you click anything in the control panel, it sends a message instantly to the overlay
-- If the overlay is open in vMix's built-in browser, use the **"Open Overlay"** button in the control panel to open it in a separate Chrome window and it will receive messages via `window.postMessage`
-
----
-
-## FINDING YOUR IDs
-
-**Bounty ID:**
-- Go to your tournament on Matcherino
-- Open DevTools (F12) → Network tab
-- Reload — look for request containing `bounties?id=XXXXXX`
-- That number is your Bounty ID
-
-**Match ID:**
-- Click a match in the bracket
-- The URL changes or a network request appears: `brackets/match?matchId=XXXXXX`
-- That number is your Match ID
-
-**Bracket ID:**
-- Found in the `/bounties?id=X` response under `bracketIds`
-
----
-
-## IMAGE ASSETS
-
-The overlay supports:
-- **Team logos**: Upload via control panel, or paste a CDN URL (Matcherino provides these automatically when loaded via API)
-- **Player portraits**: Upload per-player in the control panel
-- **Brawler images**: Fetched automatically from Matcherino API — no manual work needed
-
-For local assets, place images in the `assets/` folder and reference them as `../assets/teams/logo.png` in the URL field.
-
----
-
-## NOTES FOR VMIX
-
-- Set the web browser input to **no border, no scrollbars**
-- The overlay is `1920×1080` — use the same resolution in vMix
-- The background is fully transparent (`background: transparent`)
-- The overlay slides in from the bottom when visible, hides when you click HIDE
-- For best results: use vMix 4K or vMix Pro (supports transparent web overlays)
-- The overlay animates in/out — control this with the SHOW/HIDE buttons in the panel
+| Problem | Fix |
+|---------|-----|
+| Control panel not opening | Make sure `START.bat` is running (keep the terminal window open) |
+| CORS errors | You opened the file directly — always use `http://localhost:8080/` |
+| Bans not showing | Click **LOAD FROM API** first, then **PUSH ALL TO OVERLAY** |
+| API not loading | Check your Bounty ID and Match ID are correct |
+| Port 8080 in use | Close other apps using port 8080, or restart your PC |
