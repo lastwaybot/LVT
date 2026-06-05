@@ -298,12 +298,18 @@ function maybeResetTimerForPhase() {
 //  API
 // ─────────────────────────────────────────────
 const API = 'https://matcherino.com/__api';
-const PROXY = 'https://corsproxy.io/?url=';
+// Use built-in server proxy when running via localhost — no CORS issues
+function getProxy() {
+  if (window.location.protocol !== 'file:') {
+    return '/api/proxy?url=';
+  }
+  return 'https://corsproxy.io/?url=';
+}
 
 async function apiFetch(path) {
   try {
     const url = `${API}${path}`;
-    const resp = await fetch(PROXY + encodeURIComponent(url));
+    const resp = await fetch(getProxy() + encodeURIComponent(url));
     if (!resp.ok) throw new Error(resp.status);
     return await resp.json();
   } catch (e) {

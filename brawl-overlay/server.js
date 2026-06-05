@@ -1,6 +1,8 @@
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
+
 
 const root = __dirname;
 const port = Number(process.env.PORT || 8080);
@@ -83,7 +85,43 @@ http.createServer((req, res) => {
     return;
   }
 
+  // ── Built-in CORS proxy ──────────────────────────────────────────
+  if (requestPath === '/api/proxy' && req.method === 'GET') {
+    const params = new URLSearchParams(req.url.split('?')[1] || '');
+    const targetUrl = params.get('url');
+    if (!targetUrl || !targetUrl.startsWith('https://matcherino.com/')) {
+      res.writeHead(400, Object.assign({ 'Content-Type': 'application/json' }, headers));
+      res.end(JSON.stringify({ error: 'Invalid or disallowed URL' }));
+      return;
+    }
+    const parsedUrl = new URL(targetUrl);
+    const options = {
+      hostname: parsedUrl.hostname,
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; BrawlOverlay/1.0)',
+        'Accept': 'application/json'
+      }
+    };
+    const proxyReq = https.request(options, (proxyRes) => {
+      let data = '';
+      proxyRes.on('data', chunk => { data += chunk; });
+      proxyRes.on('end', () => {
+        res.writeHead(proxyRes.statusCode, Object.assign({ 'Content-Type': 'application/json' }, headers));
+        res.end(data);
+      });
+    });
+    proxyReq.on('error', (e) => {
+      res.writeHead(502, Object.assign({ 'Content-Type': 'application/json' }, headers));
+      res.end(JSON.stringify({ error: 'Proxy fetch failed: ' + e.message }));
+    });
+    proxyReq.end();
+    return;
+  }
+
   if (requestPath === '/') requestPath = '/control/control.html';
+
 
   const filePath = path.normalize(path.join(root, requestPath));
   if (!filePath.startsWith(root)) {

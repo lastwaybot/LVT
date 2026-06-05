@@ -222,13 +222,20 @@ function nextDraftTimer() {
 
 // BRAWLER PICKER
 const API = 'https://matcherino.com/__api';
-const PROXY = 'https://corsproxy.io/?url=';
+// Use built-in server proxy when running via localhost — no CORS issues
+// Falls back to corsproxy.io only if opened directly as file://
+function getProxy() {
+  if (window.location.protocol !== 'file:') {
+    return '/api/proxy?url=';
+  }
+  return 'https://corsproxy.io/?url=';
+}
 
 async function loadBrawlers() {
   if (state.brawlerCache.length > 0) { renderBrawlerGrid(); return; }
   log('Loading brawler roster...', 'info');
   try {
-    const resp = await fetch(PROXY + encodeURIComponent(`${API}/games/brawlstars/brawlers`));
+    const resp = await fetch(getProxy() + encodeURIComponent(`${API}/games/brawlstars/brawlers`));
     const data = await resp.json();
     const list = data.body?.brawlers || data.body || [];
     state.brawlerCache = list.sort((a,b) => (a.name||'').localeCompare(b.name||''));
@@ -379,7 +386,7 @@ async function loadFromAPI() {
   await loadBrawlers();
   if (matchId) {
     try {
-      const resp = await fetch(PROXY + encodeURIComponent(`${API}/brackets/match?matchId=${matchId}`));
+      const resp = await fetch(getProxy() + encodeURIComponent(`${API}/brackets/match?matchId=${matchId}`));
       const data = await resp.json();
       if (!data.body) throw new Error('No body in response');
       applyMatchData(data.body);
@@ -390,7 +397,7 @@ async function loadFromAPI() {
   }
   if (bountyId && matchId) {
     try {
-      const resp = await fetch(PROXY + encodeURIComponent(`${API}/games/brawlstars/match/stats?bountyId=${bountyId}&matchIds=${matchId}`));
+      const resp = await fetch(getProxy() + encodeURIComponent(`${API}/games/brawlstars/match/stats?bountyId=${bountyId}&matchIds=${matchId}`));
       const data = await resp.json();
       const matches = data.body?.matches || [];
       if (matches.length) applyStatsData(matches[0]);
