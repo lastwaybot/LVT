@@ -433,6 +433,7 @@ function filterBrawlers() { renderBrawlerGrid(); }
 function renderModalGrid() {
   const query = document.getElementById('modal-search')?.value.toLowerCase() || '';
   const grid = document.getElementById('modal-brawler-grid');
+  if (!grid) return;
   grid.innerHTML = '';
   const filtered = state.brawlerCache.filter(b => !query || (b.name||'').toLowerCase().includes(query));
   filtered.forEach(b => {
@@ -440,7 +441,25 @@ function renderModalGrid() {
     img.className = 'brawler-thumb';
     img.src = b.imageUrl || b.image || '';
     img.title = b.name;
-    img.onclick = () => { assignBanFromModal(b); closeBanModal(); };
+    img.onclick = () => {
+      if (pendingBan) {
+        if (pendingBan.type === 'pick') {
+          const team = pendingBan.side === 'a' ? state.teamA : state.teamB;
+          team.players[pendingBan.idx].brawlerImg = b.imageUrl || b.image;
+          team.players[pendingBan.idx].brawlerName = b.name;
+          updatePickSlotUI(pendingBan.side, pendingBan.idx, b);
+          pushToOverlay();
+          syncTimerToDraftPicks();
+        } else if (pendingBan.type === 'ban') {
+          const { side, slot } = pendingBan;
+          const team = side === 'a' ? state.teamA : state.teamB;
+          team.manualBans[slot] = { name: b.name, img: b.imageUrl || b.image };
+          updateManualBanSlotUI(side, slot, b);
+          pushToOverlay();
+        }
+      }
+      closeBanModal();
+    };
     grid.appendChild(img);
   });
 }
@@ -466,7 +485,7 @@ function assignBrawler(b) {
 
 let pendingBan = null;
 function openBanPicker(side, slot) {
-  pendingBan = { side, slot };
+  pendingBan = { side, slot, type: 'ban' };
   document.getElementById('modal-search').value = '';
   renderModalGrid();
   document.getElementById('ban-picker-modal').style.display = 'flex';
@@ -475,34 +494,12 @@ function closeBanModal() {
   document.getElementById('ban-picker-modal').style.display = 'none';
   pendingBan = null;
 }
-function assignBanFromModal(b) {
-  if (!pendingBan) return;
-  const { side, slot } = pendingBan;
-  const team = side === 'a' ? state.teamA : state.teamB;
-  team.manualBans[slot] = { name: b.name, img: b.imageUrl || b.image };
-  updateManualBanSlotUI(side, slot, b);
-  pushToOverlay();
-}
 
 function openPickBrawler(side, idx) {
   pendingBan = { side, idx, type: 'pick' };
   document.getElementById('modal-search').value = '';
   renderModalGrid();
   document.getElementById('ban-picker-modal').style.display = 'flex';
-  document.querySelectorAll('#modal-brawler-grid .brawler-thumb').forEach(img => {
-    img.onclick = () => {
-      const b = state.brawlerCache.find(br => br.name === img.title);
-      if (b && pendingBan?.type === 'pick') {
-        const team = pendingBan.side === 'a' ? state.teamA : state.teamB;
-        team.players[pendingBan.idx].brawlerImg = b.imageUrl || b.image;
-        team.players[pendingBan.idx].brawlerName = b.name;
-        updatePickSlotUI(pendingBan.side, pendingBan.idx, b);
-        pushToOverlay();
-        syncTimerToDraftPicks();
-      }
-      closeBanModal();
-    };
-  });
 }
 
 function clearPick(side, idx) {
@@ -807,8 +804,34 @@ function swapTeams() {
   pushToOverlay();
 }
 
+let resetPending = false;
+let resetTimeout = null;
+
 function resetAll() {
-  if (!confirm('Reset all data?')) return;
+  // Double-click safety: first click arms it, second click within 3s confirms
+  if (!resetPending) {
+    resetPending = true;
+    const btn = document.querySelector('[onclick="resetAll()"]');
+    if (btn) {
+      btn.dataset.originalText = btn.innerHTML;
+      btn.innerHTML = '⚠️ CLICK AGAIN TO CONFIRM';
+      btn.style.background = '#ff3d40';
+    }
+    resetTimeout = setTimeout(() => {
+      resetPending = false;
+      if (btn) {
+        btn.innerHTML = btn.dataset.originalText || '🗑 RESET ALL';
+        btn.style.background = '';
+      }
+    }, 3000);
+    return;
+  }
+
+  // Second click — do the actual reset
+  resetPending = false;
+  if (resetTimeout) { clearTimeout(resetTimeout); resetTimeout = null; }
+  const btn = document.querySelector('[onclick="resetAll()"]');
+  if (btn) { btn.innerHTML = btn.dataset.originalText || '🗑 RESET ALL'; btn.style.background = ''; }
   
   // Stop polling first
   stopPolling();

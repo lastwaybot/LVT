@@ -15,7 +15,8 @@ let state = {
   timer: { duration: 30, remaining: 30, running: false, turnIndex: 0, draftComplete: false },
   brawlerCache: {},
   pollInterval: null,
-  pollStatsInterval: null
+  pollStatsInterval: null,
+  lastControlTime: null
 };
 
 let timerInterval = null;
@@ -264,6 +265,8 @@ function syncTimerToDraftPicks() {
     state.timer.running = false;
     state.timer.remaining = 0;
     stopTimerInterval();
+    updateTimerDisplay();
+    render();
     return;
   }
 
@@ -275,6 +278,8 @@ function syncTimerToDraftPicks() {
   state.timer.turnIndex = nextTurnIndex;
   state.timer.remaining = state.timer.duration;
   if (state.timer.running) startTimer();
+  updateTimerDisplay();
+  render();
 }
 
 function resetTimer(duration, shouldRun = false, turnIndex = state.timer.turnIndex || 0) {
@@ -369,6 +374,7 @@ async function loadBrawlerCache() {
 }
 
 async function pollMatch() {
+  if (state.lastControlTime && Date.now() - state.lastControlTime < 10000) return;
   if (!state.matchId) return;
   await loadBrawlerCache();
   const data = await apiFetch(`/brackets/match?matchId=${state.matchId}`);
@@ -441,6 +447,7 @@ async function pollMatch() {
 }
 
 async function pollStats() {
+  if (state.lastControlTime && Date.now() - state.lastControlTime < 10000) return;
   if (!state.matchId || !state.bountyId) return;
   const data = await apiFetch(`/games/brawlstars/match/stats?bountyId=${state.bountyId}&matchIds=${state.matchId}`);
   if (!data || !data.body) return;
@@ -480,6 +487,7 @@ window.addEventListener('message', (e) => {
 
 let lastMsgId = null;
 function handleControlMessage(msg) {
+  state.lastControlTime = Date.now();
   if (msg && msg.msgId) {
     if (msg.msgId === lastMsgId) return;
     lastMsgId = msg.msgId;
@@ -560,7 +568,7 @@ function startPolling() {
   state.pollInterval = setInterval(pollMatch, 5000);
   if (state.bountyId) {
     pollStats();
-    state.pollStatsInterval = setInterval(pollStats, 3000);
+    state.pollStatsInterval = setInterval(pollStats, 1500);
   }
 }
 
