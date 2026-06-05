@@ -142,8 +142,8 @@ body {
 
 .side-column {
   display: grid;
-  grid-template-rows: repeat(3, 108px) 1fr 112px;
-  gap: 18px;
+  grid-template-rows: repeat(5, 68px) 1fr 112px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -169,8 +169,25 @@ body {
 
 .ban-card {
   background: #151515;
-  border: 4px solid #201707;
+  border: 3px solid #201707;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+.ban-card.empty {
+  background: linear-gradient(135deg, rgba(255,255,255,0.07), transparent 55%), #1c1c1c;
+}
+
+.ban-card.ban-manual {
+  border-color: #ffa50030;
+  background: #1a1000;
+}
+
+.ban-card.ban-manual.empty {
+  background: linear-gradient(135deg, rgba(255,180,0,0.07), transparent 55%), #181000;
+}
+
 
 .ban-card img,
 .pick-art img,
@@ -180,21 +197,6 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-.ban-card.empty {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.13), transparent 55%), #222;
-}
-
-.ban-card::after {
-  content: "X";
-  position: absolute;
-  right: -6px;
-  bottom: -18px;
-  color: #ff1c33;
-  font-size: 70px;
-  line-height: 1;
-  text-shadow: 3px 3px 0 #611;
 }
 
 .team-strip {
@@ -244,8 +246,8 @@ body {
 
 .pick-column {
   display: grid;
-  grid-template-rows: 260px 260px 260px;
-  gap: 28px;
+  grid-template-rows: 250px 250px 250px;
+  gap: 23px;
   min-width: 0;
 }
 

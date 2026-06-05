@@ -80,8 +80,8 @@ function render() {
   setTeamLogo('b', state.teamB.logo, state.teamB.name);
   renderPlayers('a', state.teamA.players || []);
   renderPlayers('b', state.teamB.players || []);
-  renderBans('a', state.teamA.bans || []);
-  renderBans('b', state.teamB.bans || []);
+  renderBans('a', state.teamA.bans || [], state.teamA.manualBans || []);
+  renderBans('b', state.teamB.bans || [], state.teamB.manualBans || []);
   renderFeaturedPlayer('a', state.teamA.players && state.teamA.players[0]);
   renderFeaturedPlayer('b', state.teamB.players && state.teamB.players[0]);
 }
@@ -176,11 +176,29 @@ function renderPlayers(side, players) {
   }
 }
 
-function renderBans(side, bans) {
+function renderBans(side, bans, manualBans) {
+  // Slots 0-2: API bans (auto from Matcherino)
   for (let i = 0; i < 3; i++) {
     const slot = document.getElementById(`ban-${side}-${i}`);
-    const ban = bans[i] || {};
+    if (!slot) continue;
+    const ban = (bans || [])[i] || {};
     slot.className = 'ban-card empty';
+    slot.innerHTML = '';
+    if (ban.img) {
+      const img = document.createElement('img');
+      img.src = ban.img;
+      img.alt = ban.name || '';
+      img.onerror = () => img.remove();
+      slot.classList.remove('empty');
+      slot.appendChild(img);
+    }
+  }
+  // Slots 3-4: Manual bans (set from control panel)
+  for (let i = 0; i < 2; i++) {
+    const slot = document.getElementById(`ban-${side}-${3 + i}`);
+    if (!slot) continue;
+    const ban = (manualBans || [])[i] || {};
+    slot.className = 'ban-card empty ban-manual';
     slot.innerHTML = '';
     if (ban.img) {
       const img = document.createElement('img');
@@ -345,14 +363,31 @@ async function pollMatch() {
     }));
   }
 
-  state.teamA.bans = (m.bannedBrawlersEntrantA || []).map(id => state.brawlerCache[id] ? {
-    name: state.brawlerCache[id].name,
-    img: state.brawlerCache[id].img
-  } : {});
-  state.teamB.bans = (m.bannedBrawlersEntrantB || []).map(id => state.brawlerCache[id] ? {
-    name: state.brawlerCache[id].name,
-    img: state.brawlerCache[id].img
-  } : {});
+  // Only update bans from overlay's own API poll if:
+  // 1. The brawlerCache is populated (CORS proxy succeeded)
+  // 2. At least one ban ID resolves to a real brawler with image
+  // Otherwise keep whatever the control panel sent via FULL_STATE
+  const cacheLoaded = Object.keys(state.brawlerCache).length > 0;
+  const apiBansA = (m.bannedBrawlersEntrantA || []);
+  if (apiBansA.length > 0 && cacheLoaded) {
+    const resolvedA = apiBansA.map(id => state.brawlerCache[id] ? {
+      name: state.brawlerCache[id].name,
+      img: state.brawlerCache[id].img
+    } : null);
+    if (resolvedA.some(b => b && b.img)) {
+      state.teamA.bans = resolvedA.map(b => b || {});
+    }
+  }
+  const apiBansB = (m.bannedBrawlersEntrantB || []);
+  if (apiBansB.length > 0 && cacheLoaded) {
+    const resolvedB = apiBansB.map(id => state.brawlerCache[id] ? {
+      name: state.brawlerCache[id].name,
+      img: state.brawlerCache[id].img
+    } : null);
+    if (resolvedB.some(b => b && b.img)) {
+      state.teamB.bans = resolvedB.map(b => b || {});
+    }
+  }
 
   maybeResetTimerForPhase();
   render();

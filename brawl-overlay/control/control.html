@@ -52,7 +52,20 @@
     </div>
 
     <hr>
-    <div class="card-title" style="margin-top:4px;">🚫 BANS</div>
+    <div class="card-title" style="margin-top:4px;">🌐 API BANS <span style="font-size:10px;font-weight:400;color:var(--text-muted);">(auto)</span></div>
+    <div class="ban-row" id="api-bans-a-display">
+      <div class="ban-slot-edit" id="api-ban-a-slot-0" style="opacity:0.5;cursor:default;" title="Auto-populated from API">
+        <span style="font-size:10px;color:rgba(255,255,255,0.3)">API</span>
+      </div>
+      <div class="ban-slot-edit" id="api-ban-a-slot-1" style="opacity:0.5;cursor:default;" title="Auto-populated from API">
+        <span style="font-size:10px;color:rgba(255,255,255,0.3)">API</span>
+      </div>
+      <div class="ban-slot-edit" id="api-ban-a-slot-2" style="opacity:0.5;cursor:default;" title="Auto-populated from API">
+        <span style="font-size:10px;color:rgba(255,255,255,0.3)">API</span>
+      </div>
+      <span style="font-size:11px;color:var(--text-muted)">Auto from Matcherino</span>
+    </div>
+    <div class="card-title" style="margin-top:8px;">✋ MANUAL BANS</div>
     <div class="ban-row" id="bans-a-edit">
       <div class="ban-slot-edit" id="ban-a-slot-0" onclick="openBanPicker('a',0)">
         <span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span>
@@ -62,7 +75,7 @@
         <span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span>
         <div class="remove-ban" onclick="clearBan('a',1,event)">✕</div>
       </div>
-      <span style="font-size:11px;color:var(--text-muted)">Click slot to assign brawler</span>
+      <span style="font-size:11px;color:var(--text-muted)">Click slot to assign</span>
     </div>
   </div>
 
@@ -224,7 +237,20 @@
     </div>
 
     <hr>
-    <div class="card-title" style="margin-top:4px;">🚫 BANS</div>
+    <div class="card-title" style="margin-top:4px;">🌐 API BANS <span style="font-size:10px;font-weight:400;color:var(--text-muted);">(auto)</span></div>
+    <div class="ban-row" id="api-bans-b-display">
+      <div class="ban-slot-edit" id="api-ban-b-slot-0" style="opacity:0.5;cursor:default;" title="Auto-populated from API">
+        <span style="font-size:10px;color:rgba(255,255,255,0.3)">API</span>
+      </div>
+      <div class="ban-slot-edit" id="api-ban-b-slot-1" style="opacity:0.5;cursor:default;" title="Auto-populated from API">
+        <span style="font-size:10px;color:rgba(255,255,255,0.3)">API</span>
+      </div>
+      <div class="ban-slot-edit" id="api-ban-b-slot-2" style="opacity:0.5;cursor:default;" title="Auto-populated from API">
+        <span style="font-size:10px;color:rgba(255,255,255,0.3)">API</span>
+      </div>
+      <span style="font-size:11px;color:var(--text-muted)">Auto from Matcherino</span>
+    </div>
+    <div class="card-title" style="margin-top:8px;">✋ MANUAL BANS</div>
     <div class="ban-row" id="bans-b-edit">
       <div class="ban-slot-edit" id="ban-b-slot-0" onclick="openBanPicker('b',0)">
         <span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span>
@@ -234,7 +260,7 @@
         <span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span>
         <div class="remove-ban" onclick="clearBan('b',1,event)">✕</div>
       </div>
-      <span style="font-size:11px;color:var(--text-muted)">Click slot to assign brawler</span>
+      <span style="font-size:11px;color:var(--text-muted)">Click slot to assign</span>
     </div>
   </div>
 
@@ -247,10 +273,6 @@
       <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;color:var(--text-muted);">Assign to:</span>
         <select id="brawler-target" style="width:auto;margin:0;font-size:11px;padding:4px 8px;">
-          <option value="ban-a-0">Team A — Ban 1</option>
-          <option value="ban-a-1">Team A — Ban 2</option>
-          <option value="ban-b-0">Team B — Ban 1</option>
-          <option value="ban-b-1">Team B — Ban 2</option>
           <option value="pick-a-0">Team A — Player 1 Pick</option>
           <option value="pick-a-1">Team A — Player 2 Pick</option>
           <option value="pick-a-2">Team A — Player 3 Pick</option>

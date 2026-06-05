@@ -9,7 +9,8 @@ const state = {
       {name:'PLAYER2', userId:'', avatar:null, brawlerImg:null, brawlerName:null},
       {name:'PLAYER3', userId:'', avatar:null, brawlerImg:null, brawlerName:null},
     ],
-    bans: [{},{}],
+    bans: [{},{},{}],      // Auto from API
+    manualBans: [{},{}],   // Set manually
     score: 0
   },
   teamB: {
@@ -19,7 +20,8 @@ const state = {
       {name:'PLAYER5', userId:'', avatar:null, brawlerImg:null, brawlerName:null},
       {name:'PLAYER6', userId:'', avatar:null, brawlerImg:null, brawlerName:null},
     ],
-    bans: [{},{}],
+    bans: [{},{},{}],      // Auto from API
+    manualBans: [{},{}],   // Set manually
     score: 0
   },
   phase: 'live',
@@ -304,8 +306,8 @@ function assignBanFromModal(b) {
   if (!pendingBan) return;
   const { side, slot } = pendingBan;
   const team = side === 'a' ? state.teamA : state.teamB;
-  team.bans[slot] = { name: b.name, img: b.imageUrl || b.image };
-  updateBanSlotUI(side, slot, b);
+  team.manualBans[slot] = { name: b.name, img: b.imageUrl || b.image };
+  updateManualBanSlotUI(side, slot, b);
   pushToOverlay();
 }
 
@@ -338,9 +340,17 @@ function clearPick(side, idx) {
   pushToOverlay();
 }
 
-function updateBanSlotUI(side, slot, b) {
+function updateManualBanSlotUI(side, slot, b) {
   const el = document.getElementById(`ban-${side}-slot-${slot}`);
-  el.innerHTML = `<img src="${b.imageUrl||b.image}" style="width:100%;height:100%;object-fit:contain;border-radius:4px;"><div class="remove-ban" onclick="clearBan('${side}',${slot},event)">✕</div>`;
+  if (!el) return;
+  el.innerHTML = `<img src="${b.imageUrl || b.image || b.img}" style="width:100%;height:100%;object-fit:contain;border-radius:4px;"><div class="remove-ban" onclick="clearBan('${side}',${slot},event)">✕</div>`;
+}
+
+function updateApiBanDisplay(side, slot, b) {
+  const el = document.getElementById(`api-ban-${side}-slot-${slot}`);
+  if (!el) return;
+  el.innerHTML = `<img src="${b.imageUrl || b.image || b.img}" style="width:100%;height:100%;object-fit:contain;border-radius:4px;opacity:1;">`;
+  el.style.opacity = '1';
 }
 
 function updatePickSlotUI(side, idx, b) {
@@ -351,9 +361,9 @@ function updatePickSlotUI(side, idx, b) {
 function clearBan(side, slot, e) {
   e.stopPropagation();
   const team = side === 'a' ? state.teamA : state.teamB;
-  team.bans[slot] = {};
+  team.manualBans[slot] = {};
   const el = document.getElementById(`ban-${side}-slot-${slot}`);
-  el.innerHTML = `<span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span><div class="remove-ban" onclick="clearBan('${side}',${slot},event)">✕</div>`;
+  if (el) el.innerHTML = `<span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span><div class="remove-ban" onclick="clearBan('${side}',${slot},event)">✕</div>`;
   pushToOverlay();
 }
 
@@ -442,13 +452,13 @@ function applyMatchData(m) {
   }
   const brawlerById = {};
   state.brawlerCache.forEach(b => brawlerById[b.id] = b);
-  (m.bannedBrawlersEntrantA || []).slice(0,2).forEach((id,i) => {
+  (m.bannedBrawlersEntrantA || []).slice(0,3).forEach((id,i) => {
     const b = brawlerById[id];
-    if (b) { state.teamA.bans[i] = { name: b.name, img: b.imageUrl||b.image }; updateBanSlotUI('a',i,b); }
+    if (b) { state.teamA.bans[i] = { name: b.name, img: b.imageUrl||b.image }; updateApiBanDisplay('a',i,b); }
   });
-  (m.bannedBrawlersEntrantB || []).slice(0,2).forEach((id,i) => {
+  (m.bannedBrawlersEntrantB || []).slice(0,3).forEach((id,i) => {
     const b = brawlerById[id];
-    if (b) { state.teamB.bans[i] = { name: b.name, img: b.imageUrl||b.image }; updateBanSlotUI('b',i,b); }
+    if (b) { state.teamB.bans[i] = { name: b.name, img: b.imageUrl||b.image }; updateApiBanDisplay('b',i,b); }
   });
   document.getElementById('score-ta-name').textContent = state.teamA.name.toUpperCase();
   document.getElementById('score-tb-name').textContent = state.teamB.name.toUpperCase();
@@ -607,7 +617,8 @@ function resetAll() {
       {name:'PLAYER2', userId:'', avatar:null, brawlerImg:null, brawlerName:null},
       {name:'PLAYER3', userId:'', avatar:null, brawlerImg:null, brawlerName:null}
     ], 
-    bans: [{},{}], 
+    bans: [{},{},{}],
+    manualBans: [{},{}],
     score: 0 
   };
   state.teamB = { 
@@ -618,7 +629,8 @@ function resetAll() {
       {name:'PLAYER5', userId:'', avatar:null, brawlerImg:null, brawlerName:null},
       {name:'PLAYER6', userId:'', avatar:null, brawlerImg:null, brawlerName:null}
     ], 
-    bans: [{},{}], 
+    bans: [{},{},{}],
+    manualBans: [{},{}],
     score: 0 
   };
 
@@ -636,12 +648,19 @@ function resetAll() {
   document.getElementById('ta-logo-prev').innerHTML = '🛡';
   document.getElementById('tb-logo-prev').innerHTML = '🛡';
   
-  // Reset ban slots UI in control panel
+  // Reset manual ban slots UI (2 per team)
   for (let i = 0; i < 2; i++) {
     const elA = document.getElementById(`ban-a-slot-${i}`);
     if (elA) elA.innerHTML = `<span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span><div class="remove-ban" onclick="clearBan('a',${i},event)">✕</div>`;
     const elB = document.getElementById(`ban-b-slot-${i}`);
     if (elB) elB.innerHTML = `<span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span><div class="remove-ban" onclick="clearBan('b',${i},event)">✕</div>`;
+  }
+  // Reset API ban display slots (3 per team)
+  for (let i = 0; i < 3; i++) {
+    const apiA = document.getElementById(`api-ban-a-slot-${i}`);
+    if (apiA) { apiA.innerHTML = `<span style="font-size:10px;color:rgba(255,255,255,0.3)">API</span>`; apiA.style.opacity = '0.5'; }
+    const apiB = document.getElementById(`api-ban-b-slot-${i}`);
+    if (apiB) { apiB.innerHTML = `<span style="font-size:10px;color:rgba(255,255,255,0.3)">API</span>`; apiB.style.opacity = '0.5'; }
   }
 
   // Clear API log and reset status
