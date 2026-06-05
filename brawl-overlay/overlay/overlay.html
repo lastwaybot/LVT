@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brawl Stars Draft Overlay</title>
+  <link rel="stylesheet" href="overlay.css">
+</head>
+
+<body>
+  <div id="overlay">
+    <div class="bg-pattern"></div>
+
+    <div class="brand-badge" id="tournament-badge">
+      <div class="brand-mark"></div>
+      <div class="brand-title" id="badge-title"><strong>Brawl Stars</strong> Challengers</div>
+      <div class="brand-subtitle" id="badge-subtitle">South Asia</div>
+    </div>
+
+    <main class="stage">
+      <section class="panel-shell team-board left">
+        <div class="side-column">
+          <div class="ban-card empty" id="ban-a-0"></div>
+          <div class="ban-card empty" id="ban-a-1"></div>
+          <div class="ban-card empty" id="ban-a-2"></div>
+          <div class="team-strip blue"><span id="team-a-name">TEAM A</span></div>
+          <div class="team-logo-card" id="team-a-logo-wrap">
+            <div class="team-logo-placeholder" id="team-a-logo-placeholder">A</div>
+          </div>
+        </div>
+        <div class="pick-column" id="players-a"></div>
+      </section>
+
+      <section class="center-stack">
+        <article class="camera-card red">
+          <div class="camera-body">
+            <div class="camera-frame" id="camera-b"></div>
+          </div>
+          <div class="player-strip red"><span id="feature-b-name">PLAYER4</span></div>
+        </article>
+        <article class="camera-card blue">
+          <div class="camera-body">
+            <div class="camera-frame" id="camera-a"></div>
+          </div>
+          <div class="player-strip blue"><span id="feature-a-name">PLAYER1</span></div>
+        </article>
+      </section>
+
+      <section class="panel-shell team-board right">
+        <div class="side-column">
+          <div class="ban-card empty" id="ban-b-0"></div>
+          <div class="ban-card empty" id="ban-b-1"></div>
+          <div class="ban-card empty" id="ban-b-2"></div>
+          <div class="team-strip red"><span id="team-b-name">TEAM B</span></div>
+          <div class="team-logo-card" id="team-b-logo-wrap">
+            <div class="team-logo-placeholder" id="team-b-logo-placeholder">B</div>
+          </div>
+        </div>
+        <div class="pick-column" id="players-b"></div>
+      </section>
+
+      <div class="match-bar">
+        <div><strong id="score-a-num">0</strong> <span id="format-label">BO3</span></div>
+        <div id="info-map">DRAFT</div>
+        <div class="right"><span id="match-status-badge">WAITING</span> <strong id="score-b-num">0</strong></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="overlay.js"></script>
+</body>
+
+</html>

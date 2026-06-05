@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1400, initial-scale=1">
+<title>Brawl Stars Overlay — Control Panel</title>
+<link rel="stylesheet" href="control.css">
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div>
+      <div class="header-logo">⚡ Brawl Stars — Overlay Control</div>
+      <div class="header-sub">BROADCAST CONTROL PANEL · MATCHERINO API</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;">
+    <div class="status-pill disconnected" id="conn-status">
+      <div class="dot"></div>
+      <span id="conn-label">NO OVERLAY</span>
+    </div>
+    <div class="status-pill disconnected" id="api-status">
+      <div class="dot"></div>
+      <span id="api-label">API IDLE</span>
+    </div>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ── LEFT COLUMN: TEAM A ── -->
+  <div class="card team-card blue">
+    <div class="card-title">🔵 TEAM A (LEFT)</div>
+
+    <label>Team Name</label>
+    <input type="text" id="ta-name" placeholder="G2 Esports" oninput="updateTeam('a')">
+
+    <label>Team Logo</label>
+    <div class="upload-btn-wrap">
+      <div class="img-preview" id="ta-logo-prev">🛡</div>
+      <label for="ta-logo-file" class="btn btn-outline btn-sm">Upload Logo</label>
+      <input type="file" id="ta-logo-file" accept="image/*" onchange="handleLogoUpload('a',this)">
+      <input type="text" id="ta-logo-url" placeholder="or paste URL" style="flex:1;margin:0;" oninput="updateTeamLogoUrl('a')">
+    </div>
+
+    <hr>
+    <div class="card-title" style="margin-top:4px;">👤 PLAYERS</div>
+
+    <div id="players-a-edit">
+      <!-- Generated -->
+    </div>
+
+    <hr>
+    <div class="card-title" style="margin-top:4px;">🚫 BANS</div>
+    <div class="ban-row" id="bans-a-edit">
+      <div class="ban-slot-edit" id="ban-a-slot-0" onclick="openBanPicker('a',0)">
+        <span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span>
+        <div class="remove-ban" onclick="clearBan('a',0,event)">✕</div>
+      </div>
+      <div class="ban-slot-edit" id="ban-a-slot-1" onclick="openBanPicker('a',1)">
+        <span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span>
+        <div class="remove-ban" onclick="clearBan('a',1,event)">✕</div>
+      </div>
+      <span style="font-size:11px;color:var(--text-muted)">Click slot to assign brawler</span>
+    </div>
+  </div>
+
+  <!-- ── CENTER COLUMN ── -->
+  <div class="center-col">
+
+    <!-- IDs Card -->
+    <div class="card">
+      <div class="card-title">🔗 API CONFIGURATION</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label>Bounty ID (Tournament)</label>
+          <input type="text" id="bounty-id" placeholder="192279">
+        </div>
+        <div>
+          <label>Match ID</label>
+          <input type="text" id="match-id" placeholder="180474500">
+        </div>
+        <div>
+          <label>Bracket ID (optional)</label>
+          <input type="text" id="bracket-id" placeholder="24574">
+        </div>
+        <div>
+          <label>Poll Interval (seconds)</label>
+          <input type="number" id="poll-interval" value="5" min="2" max="30">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-gold" onclick="loadFromAPI()">⬇ LOAD FROM API</button>
+        <button class="btn btn-outline" onclick="startPolling()">▶ START POLLING</button>
+        <button class="btn btn-outline btn-danger" onclick="stopPolling()">⏹ STOP</button>
+      </div>
+      <div style="margin-top:10px;">
+        <label>API Log</label>
+        <div id="api-log"><span class="log-info">Control panel ready. Enter IDs and click LOAD FROM API.</span></div>
+      </div>
+    </div>
+
+    <!-- Score Card -->
+    <div class="card">
+      <div class="card-title">🏆 SERIES SCORE</div>
+      <div class="score-controls">
+        <div class="score-team">
+          <div class="score-team-name" id="score-ta-name">TEAM A</div>
+          <div class="score-display blue" id="score-a-display">0</div>
+          <div class="score-btns">
+            <button class="btn btn-outline btn-sm" onclick="adjustScore('a',-1)">−</button>
+            <button class="btn btn-blue btn-sm" onclick="adjustScore('a',1)">+</button>
+          </div>
+        </div>
+        <div class="score-vs">VS</div>
+        <div class="score-team">
+          <div class="score-team-name" id="score-tb-name">TEAM B</div>
+          <div class="score-display red" id="score-b-display">0</div>
+          <div class="score-btns">
+            <button class="btn btn-outline btn-sm" onclick="adjustScore('b',-1)">−</button>
+            <button class="btn btn-red btn-sm" onclick="adjustScore('b',1)">+</button>
+          </div>
+        </div>
+      </div>
+      <hr>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
+        <div>
+          <label>Match Format</label>
+          <select id="format-select" onchange="updateFormat()">
+            <option value="BO1">Best of 1</option>
+            <option value="BO3" selected>Best of 3</option>
+            <option value="BO5">Best of 5</option>
+            <option value="BO7">Best of 7</option>
+          </select>
+        </div>
+        <div>
+          <label>Match Status (manual)</label>
+          <select id="status-select" onchange="updateStatus()">
+            <option value="waiting">Waiting</option>
+            <option value="ready">Ready</option>
+            <option value="in-progress">In Progress</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase Controls -->
+    <div class="card">
+      <div class="card-title">⚡ DRAFT PHASE</div>
+      <div class="phase-controls" id="phase-btns">
+        <div class="phase-btn" onclick="setPhase('waiting')">⏳ WAITING</div>
+        <div class="phase-btn" onclick="setPhase('ban')">🚫 BAN PHASE</div>
+        <div class="phase-btn" onclick="setPhase('pick')">✅ PICK PHASE</div>
+        <div class="phase-btn active" onclick="setPhase('live')">🔴 LIVE</div>
+      </div>
+      <hr>
+      <div>
+        <label>Map / Location</label>
+        <input type="text" id="map-input" placeholder="Hard Rock Mine — Bounty" oninput="updateMap()">
+      </div>
+    </div>
+
+    <!-- Timer Controls -->
+    <div class="card">
+      <div class="card-title">DRAFT TIMER</div>
+      <div class="timer-controls">
+        <div>
+          <label>Seconds</label>
+          <input type="number" id="timer-duration" value="30" min="1" max="300">
+        </div>
+        <div class="timer-buttons">
+          <button class="btn btn-gold btn-sm" onclick="resetDraftTimer()">RESET</button>
+          <button class="btn btn-green btn-sm" onclick="startDraftTimer()">START</button>
+          <button class="btn btn-outline btn-sm" onclick="pauseDraftTimer()">PAUSE</button>
+          <button class="btn btn-outline btn-sm" onclick="nextDraftTimer()">NEXT TURN</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay Control -->
+    <div class="card">
+      <div class="card-title">📺 OVERLAY VISIBILITY</div>
+      <div class="visibility-toggle">
+        <button class="btn btn-green" onclick="setOverlayVisible(true)">👁 SHOW OVERLAY</button>
+        <button class="btn btn-danger" onclick="setOverlayVisible(false)">🙈 HIDE OVERLAY</button>
+        <button class="btn btn-gold" onclick="resetScores()">🔄 RESET SCORES</button>
+      </div>
+      <hr>
+      <label>Tournament Badge Title</label>
+      <input type="text" id="badge-title" value="BRAWL STARS" oninput="updateBadge()">
+      <label>Tournament Badge Subtitle</label>
+      <input type="text" id="badge-subtitle" value="CHALLENGERS · SOUTH ASIA" oninput="updateBadge()">
+      <hr>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:var(--text-muted);">Open overlay in new window (for vMix):</span>
+        <button class="btn btn-gold btn-sm" onclick="openOverlay()">🚀 OPEN OVERLAY</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── RIGHT COLUMN: TEAM B ── -->
+  <div class="card team-card red">
+    <div class="card-title">🔴 TEAM B (RIGHT)</div>
+
+    <label>Team Name</label>
+    <input type="text" id="tb-name" placeholder="Team Liquid" oninput="updateTeam('b')">
+
+    <label>Team Logo</label>
+    <div class="upload-btn-wrap">
+      <div class="img-preview" id="tb-logo-prev">🛡</div>
+      <label for="tb-logo-file" class="btn btn-outline btn-sm">Upload Logo</label>
+      <input type="file" id="tb-logo-file" accept="image/*" onchange="handleLogoUpload('b',this)">
+      <input type="text" id="tb-logo-url" placeholder="or paste URL" style="flex:1;margin:0;" oninput="updateTeamLogoUrl('b')">
+    </div>
+
+    <hr>
+    <div class="card-title" style="margin-top:4px;">👤 PLAYERS</div>
+
+    <div id="players-b-edit">
+      <!-- Generated -->
+    </div>
+
+    <hr>
+    <div class="card-title" style="margin-top:4px;">🚫 BANS</div>
+    <div class="ban-row" id="bans-b-edit">
+      <div class="ban-slot-edit" id="ban-b-slot-0" onclick="openBanPicker('b',0)">
+        <span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span>
+        <div class="remove-ban" onclick="clearBan('b',0,event)">✕</div>
+      </div>
+      <div class="ban-slot-edit" id="ban-b-slot-1" onclick="openBanPicker('b',1)">
+        <span style="font-size:20px;color:rgba(255,255,255,0.2)">+</span>
+        <div class="remove-ban" onclick="clearBan('b',1,event)">✕</div>
+      </div>
+      <span style="font-size:11px;color:var(--text-muted)">Click slot to assign brawler</span>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM ROW ── -->
+  <div class="bottom-row">
+
+    <!-- Brawler Picker -->
+    <div class="card">
+      <div class="card-title">🎮 BRAWLER PICKER</div>
+      <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span style="font-size:11px;color:var(--text-muted);">Assign to:</span>
+        <select id="brawler-target" style="width:auto;margin:0;font-size:11px;padding:4px 8px;">
+          <option value="ban-a-0">Team A — Ban 1</option>
+          <option value="ban-a-1">Team A — Ban 2</option>
+          <option value="ban-b-0">Team B — Ban 1</option>
+          <option value="ban-b-1">Team B — Ban 2</option>
+          <option value="pick-a-0">Team A — Player 1 Pick</option>
+          <option value="pick-a-1">Team A — Player 2 Pick</option>
+          <option value="pick-a-2">Team A — Player 3 Pick</option>
+          <option value="pick-b-0">Team B — Player 1 Pick</option>
+          <option value="pick-b-1">Team B — Player 2 Pick</option>
+          <option value="pick-b-2">Team B — Player 3 Pick</option>
+        </select>
+        <button class="btn btn-gold btn-sm" onclick="loadBrawlers()">↻ Load Brawlers</button>
+      </div>
+      <input type="text" id="brawler-search" class="brawler-search" placeholder="Search brawler..." oninput="filterBrawlers()">
+      <div class="brawler-grid" id="brawler-grid">
+        <div style="color:var(--text-muted);font-size:11px;padding:8px;grid-column:1/-1;">
+          Click "Load Brawlers" to fetch from API, or brawlers load automatically.
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-title">⚡ QUICK ACTIONS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="btn btn-gold btn-full" onclick="pushToOverlay()">📤 PUSH ALL TO OVERLAY</button>
+        <button class="btn btn-outline btn-full" onclick="loadFromAPI()">🔄 REFRESH FROM API</button>
+        <button class="btn btn-outline btn-full" onclick="swapTeams()">↔ SWAP TEAMS</button>
+        <button class="btn btn-danger btn-full" onclick="resetAll()">🗑 RESET ALL</button>
+      </div>
+      <hr>
+      <div class="card-title" style="margin-top:0;">📋 MATCH SUMMARY</div>
+      <div id="match-summary" style="font-size:11px;line-height:2;color:var(--text-muted);">
+        No data loaded.
+      </div>
+    </div>
+
+    <!-- vMix Instructions -->
+    <div class="card">
+      <div class="card-title">📺 vMix SETUP GUIDE</div>
+      <div style="font-size:11px;line-height:1.9;color:var(--text-muted);">
+        <strong style="color:var(--gold);">1. Add Web Browser Input</strong><br>
+        In vMix → Add Input → Web Browser → Enter overlay URL<br>
+        Set: <code style="color:#7dd3fc;">1920 × 1080</code>, enable <strong>Transparent</strong><br><br>
+        <strong style="color:var(--gold);">2. Overlay URL</strong><br>
+        <code id="overlay-url-display" style="color:#7dd3fc;font-size:10px;word-break:break-all;">overlay/overlay.html</code><br>
+        <button class="btn btn-outline btn-sm" style="margin-top:4px;" onclick="copyOverlayUrl()">📋 Copy URL</button><br><br>
+        <strong style="color:var(--gold);">3. Layer it</strong><br>
+        Drag overlay to overlay track, set blend = Normal<br><br>
+        <strong style="color:var(--gold);">4. Control</strong><br>
+        Keep this panel open on a 2nd monitor. Changes push live to overlay via BroadcastChannel.<br><br>
+        <strong style="color:var(--gold);">5. Polling</strong><br>
+        Enter Bounty ID + Match ID → Load from API → Start Polling for live data.
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- BRAWLER PICKER MODAL -->
+<div id="ban-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border:2px solid var(--gold);border-radius:12px;padding:24px;width:500px;max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:1px;">Select Brawler</div>
+      <button class="btn btn-outline btn-sm" onclick="closeBanModal()">✕ Close</button>
+    </div>
+    <input type="text" id="modal-search" placeholder="Search..." oninput="filterModalBrawlers()" style="margin-bottom:12px;">
+    <div class="brawler-grid" id="modal-brawler-grid" style="max-height:400px;"></div>
+  </div>
+</div>
+
+<script src="control.js"></script>
+</body>
+</html>
